@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brangkass — Brankas Berkas Pribadi Terenkripsi</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🔐 Brangkass</div>
+  <div class="subtitle">Brankas Berkas Pribadi Terenkripsi &middot; AES-256-GCM / ChaCha20-Poly1305</div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="text">Teks</button>
+  <button class="tab-btn" data-tab="file">Berkas</button>
+  <button class="tab-btn" data-tab="analysis">Analisis &amp; Pengujian</button>
+  <button class="tab-btn" data-tab="compare">Perbandingan Algoritma</button>
+  <button class="tab-btn" data-tab="api">API (JWT)</button>
+</nav>
+
+<main>
+
+<!-- ======================= TAB: TEKS ======================= -->
+<section id="tab-text" class="tab-panel active">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Enkripsi Teks</h2>
+      <label>Teks / plainteks</label>
+      <textarea id="enc-plaintext" rows="4" placeholder="Tulis pesan rahasia di sini..."></textarea>
+      <label>Kata sandi</label>
+      <input type="password" id="enc-password" placeholder="Kata sandi">
+      <div class="row">
+        <div>
+          <label>Algoritma</label>
+          <select id="enc-algo">
+            <option value="aes-gcm">AES-256-GCM</option>
+            <option value="chacha20">ChaCha20-Poly1305</option>
+          </select>
+        </div>
+        <div>
+          <label>Derivasi kunci (KDF)</label>
+          <select id="enc-kdf">
+            <option value="pbkdf2">PBKDF2 (200.000 iterasi)</option>
+            <option value="scrypt">scrypt (N=16384)</option>
+            <option value="argon2">Argon2id</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn primary" onclick="encryptText()">Enkripsi</button>
+
+      <div id="enc-result" class="result hidden">
+        <label>Cipherteks (Base64)</label>
+        <textarea id="enc-out-b64" rows="4" readonly></textarea>
+        <button class="btn small" onclick="copyText('enc-out-b64')">Salin Base64</button>
+        <label>Cipherteks (Hex)</label>
+        <textarea id="enc-out-hex" rows="4" readonly></textarea>
+        <button class="btn small" onclick="copyText('enc-out-hex')">Salin Hex</button>
+        <p class="meta" id="enc-meta"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Dekripsi Teks</h2>
+      <label>Cipherteks</label>
+      <textarea id="dec-ciphertext" rows="4" placeholder="Tempel cipherteks di sini..."></textarea>
+      <label>Format</label>
+      <select id="dec-encoding">
+        <option value="base64">Base64</option>
+        <option value="hex">Hexadecimal</option>
+      </select>
+      <label>Kata sandi</label>
+      <input type="password" id="dec-password" placeholder="Kata sandi">
+      <button class="btn primary" onclick="decryptText()">Dekripsi</button>
+
+      <div id="dec-result" class="result hidden">
+        <label>Plainteks hasil dekripsi</label>
+        <textarea id="dec-out" rows="4" readonly></textarea>
+        <p class="meta" id="dec-meta"></p>
+      </div>
+      <div id="dec-error" class="error hidden"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= TAB: BERKAS ======================= -->
+<section id="tab-file" class="tab-panel">
+  <div class="grid-2">
+    <div class="card">
+      <h2>Enkripsi Berkas</h2>
+      <label>Pilih berkas (PDF, gambar, dll.)</label>
+      <input type="file" id="enc-file-input">
+      <label>Kata sandi</label>
+      <input type="password" id="enc-file-password" placeholder="Kata sandi">
+      <div class="row">
+        <div>
+          <label>Algoritma</label>
+          <select id="enc-file-algo">
+            <option value="aes-gcm">AES-256-GCM</option>
+            <option value="chacha20">ChaCha20-Poly1305</option>
+          </select>
+        </div>
+        <div>
+          <label>KDF</label>
+          <select id="enc-file-kdf">
+            <option value="pbkdf2">PBKDF2</option>
+            <option value="scrypt">scrypt</option>
+            <option value="argon2">Argon2id</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn primary" onclick="encryptFile()">Enkripsi &amp; Unduh (.brks)</button>
+      <p class="hint">Berkas terenkripsi akan diunduh otomatis dengan ekstensi <code>.brks</code>.</p>
+    </div>
+
+    <div class="card">
+      <h2>Dekripsi Berkas</h2>
+      <label>Pilih berkas .brks</label>
+      <input type="file" id="dec-file-input" accept=".brks">
+      <label>Kata sandi</label>
+      <input type="password" id="dec-file-password" placeholder="Kata sandi">
+      <button class="btn primary" onclick="decryptFile()">Dekripsi &amp; Unduh</button>
+      <div id="dec-file-error" class="error hidden"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cara Penggunaan (langkah cepat)</h2>
+    <ol>
+      <li>Unggah berkas PDF pada kolom "Enkripsi Berkas", isi kata sandi, klik Enkripsi &amp; Unduh.</li>
+      <li>Unggah hasil <code>.brks</code> pada kolom "Dekripsi Berkas" dengan kata sandi yang <b>benar</b> → PDF kembali utuh.</li>
+      <li>Ulangi dengan kata sandi yang <b>salah</b> → aplikasi menolak dan menampilkan pesan error.</li>
+      <li>Buka berkas <code>.brks</code> dengan editor hex, ubah satu byte, lalu coba dekripsi → verifikasi tag gagal.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ======================= TAB: ANALISIS ======================= -->
+<section id="tab-analysis" class="tab-panel">
+  <div class="card">
+    <h2>1. Uji Ketahanan (Correctness &amp; Tamper Test)</h2>
+    <div class="row">
+      <div><label>Teks contoh</label><input id="tamper-text" value="Pesan rahasia untuk uji ketahanan"></div>
+      <div><label>Kata sandi benar</label><input id="tamper-pass" value="kata-sandi-benar"></div>
+      <div><label>Kata sandi salah</label><input id="tamper-wrong" value="kata-sandi-salah"></div>
+    </div>
+    <button class="btn" onclick="runTamperTest()">Jalankan Uji</button>
+    <pre id="tamper-out" class="output"></pre>
+  </div>
+
+  <div class="card">
+    <h2>2. Avalanche Effect</h2>
+    <div class="row">
+      <div>
+        <label>Algoritma</label>
+        <select id="ava-algo"><option value="aes-gcm">AES-256-GCM</option><option value="chacha20">ChaCha20-Poly1305</option></select>
+      </div>
+      <div>
+        <label>Bit yang diubah</label>
+        <select id="ava-mode"><option value="plaintext">1 bit plainteks</option><option value="key">1 bit kunci</option></select>
+      </div>
+    </div>
+    <button class="btn" onclick="runAvalanche()">Hitung Avalanche Effect</button>
+    <pre id="ava-out" class="output"></pre>
+  </div>
+
+  <div class="card">
+    <h2>3. Entropi &amp; Histogram Byte</h2>
+    <label>Teks contoh</label>
+    <input id="entropy-text" value="Data rahasia perusahaan: NIK 3273xxxxxxxxxxxx, saldo Rp 15.000.000">
+    <button class="btn" onclick="runEntropy()">Hitung Entropi &amp; Histogram</button>
+    <div id="entropy-summary" class="meta"></div>
+    <div class="chart-grid">
+      <canvas id="chart-plain-hist" height="160"></canvas>
+      <canvas id="chart-cipher-hist" height="160"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. Benchmark Waktu (1 KB / 1 MB / 10 MB)</h2>
+    <div class="row">
+      <div>
+        <label>Algoritma</label>
+        <select id="bench-algo"><option value="aes-gcm">AES-256-GCM</option><option value="chacha20">ChaCha20-Poly1305</option></select>
+      </div>
+      <div>
+        <label>KDF</label>
+        <select id="bench-kdf"><option value="pbkdf2">PBKDF2</option><option value="scrypt">scrypt</option><option value="argon2">Argon2id</option></select>
+      </div>
+    </div>
+    <button class="btn" onclick="runBenchmark()">Jalankan Benchmark</button>
+    <p class="hint">10 MB memakai data acak internal (tanpa unggah) agar pengujian konsisten dan cepat.</p>
+    <table id="bench-table" class="hidden">
+      <thead><tr><th>Ukuran</th><th>Waktu Enkripsi (ms)</th><th>Waktu Dekripsi (ms)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ======================= TAB: PERBANDINGAN ======================= -->
+<section id="tab-compare" class="tab-panel">
+  <div class="card">
+    <h2>Perbandingan AES-256-GCM vs ChaCha20-Poly1305</h2>
+    <label>Ukuran data uji (KB)</label>
+    <input type="number" id="cmp-size" value="512" min="1">
+    <button class="btn primary" onclick="runCompare()">Bandingkan</button>
+    <canvas id="chart-compare" height="140"></canvas>
+  </div>
+</section>
+
+<!-- ======================= TAB: API ======================= -->
+<section id="tab-api" class="tab-panel">
+  <div class="card">
+    <h2>API RESTful Aman (JWT HMAC-SHA512) — Fitur Pengayaan</h2>
+    <p class="hint">
+      Kredensial demo bawaan: <code>api_key = demo-client</code>, <code>api_secret = demo-secret-ubah-ini</code>
+      (dapat diubah lewat environment variable <code>BRANGKAS_API_KEY</code> / <code>BRANGKAS_API_SECRET</code>).
+    </p>
+    <button class="btn" onclick="getToken()">1. Ambil Token JWT</button>
+    <pre id="api-token-out" class="output"></pre>
+
+    <label>2. Teks untuk dienkripsi via API</label>
+    <input id="api-plaintext" value="Pesan rahasia lewat API">
+    <label>Kata sandi</label>
+    <input type="password" id="api-password" value="kata-sandi-api">
+    <button class="btn" onclick="apiEncrypt()">Enkripsi via /api/v1/encrypt</button>
+    <pre id="api-encrypt-out" class="output"></pre>
+
+    <button class="btn" onclick="apiDecrypt()">Dekripsi hasil di atas via /api/v1/decrypt</button>
+    <pre id="api-decrypt-out" class="output"></pre>
+
+    <p class="hint">Contoh cURL tersedia di README.md proyek ini.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Dibuat untuk Tugas Proyek Aplikasi Kriptografi — Keamanan Informasi, Program Studi Informatika, Universitas Siliwangi.
+</footer>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
