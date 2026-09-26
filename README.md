@@ -1,4 +1,15 @@
-🔐 Brangkass — Aplikasi web (Flask/Python) untuk mengenkripsi & mendekripsi teks maupun berkas menggunakan AES-256-GCM dan ChaCha20-Poly1305. Dilengkapi derivasi kunci PBKDF2/scrypt/Argon2id, analisis avalanche effect, entropi, benchmark performa, dan REST API aman dengan JWT HMAC-SHA512.
+# 🔐 Brangkass — Aplikasi Brankas Berkas Pribadi Terenkripsi
+
+Aplikasi web (Python/Flask) untuk mengenkripsi dan mendekripsi **teks maupun berkas**
+(PDF, gambar, dll.) memakai algoritma kriptografi modern **AES-256-GCM** atau
+**ChaCha20-Poly1305**, dengan kunci diturunkan secara aman dari kata sandi.
+
+Dibuat untuk **Tugas Proyek Aplikasi Kriptografi — Topik A (Enkripsi Algoritma Modern)**,
+mata kuliah Keamanan Informasi, Program Studi Informatika, Universitas Siliwangi.
+
+**Nama Anggota:**
+- Ginanjar Abdul Hakim (247006111159)
+- Luthfi Apriliansyah (247006111165)
 
 ---
 
@@ -22,27 +33,24 @@
 ## 2. Fitur
 
 ### Fitur wajib (sesuai spesifikasi Topik A)
-
-| Fitur                                                                         | Status | Keterangan                     |
-| ----------------------------------------------------------------------------- | ------ | ------------------------------ |
-| Enkripsi simetri modern (AES-256-GCM / ChaCha20-Poly1305) untuk teks & berkas | ✅     | `crypto_utils.py`              |
-| Kunci diturunkan dari kata sandi (PBKDF2 / scrypt / Argon2id) + salt acak     | ✅     | `derive_key()`                 |
-| IV/nonce acak per-enkripsi, disimpan bersama cipherteks                       | ✅     | `os.urandom(12)` per panggilan |
-| Cipherteks ditampilkan & dapat disalin (Base64/Hex)                           | ✅     | Tab "Teks"                     |
-| Penolakan dekripsi bila kata sandi salah / cipherteks diubah                  | ✅     | `DecryptionError` (HTTP 401)   |
+| Fitur | Status | Keterangan |
+|---|---|---|
+| Enkripsi simetri modern (AES-256-GCM / ChaCha20-Poly1305) untuk teks & berkas | ✅ | `crypto_utils.py` |
+| Kunci diturunkan dari kata sandi (PBKDF2 / scrypt / Argon2id) + salt acak | ✅ | `derive_key()` |
+| IV/nonce acak per-enkripsi, disimpan bersama cipherteks | ✅ | `os.urandom(12)` per panggilan |
+| Cipherteks ditampilkan & dapat disalin (Base64/Hex) | ✅ | Tab "Teks" |
+| Penolakan dekripsi bila kata sandi salah / cipherteks diubah | ✅ | `DecryptionError` (HTTP 401) |
 
 ### Pengujian wajib
-
-| Pengujian                                                       | Endpoint / Lokasi                                            |
-| --------------------------------------------------------------- | ------------------------------------------------------------ |
-| Kebenaran dekripsi (≥10 kasus, termasuk gambar & PDF)           | `tests/test_crypto.py` + tab "Berkas"                        |
-| Waktu enkripsi/dekripsi untuk 1 KB, 1 MB, 10 MB                 | `POST /api/analysis/benchmark`                               |
-| Avalanche effect                                                | `POST /api/analysis/avalanche` (lihat catatan penting di §9) |
-| Entropi & histogram byte (cipherteks vs plainteks)              | `POST /api/analysis/entropy`                                 |
-| Perbandingan ≥2 algoritma modern (AES-GCM vs ChaCha20-Poly1305) | `POST /api/analysis/compare`                                 |
+| Pengujian | Endpoint / Lokasi |
+|---|---|
+| Kebenaran dekripsi (≥10 kasus, termasuk gambar & PDF) | `tests/test_crypto.py` + tab "Berkas" |
+| Waktu enkripsi/dekripsi untuk 1 KB, 1 MB, 10 MB | `POST /api/analysis/benchmark` |
+| Avalanche effect | `POST /api/analysis/avalanche` (lihat catatan penting di §9) |
+| Entropi & histogram byte (cipherteks vs plainteks) | `POST /api/analysis/entropy` |
+| Perbandingan ≥2 algoritma modern (AES-GCM vs ChaCha20-Poly1305) | `POST /api/analysis/compare` |
 
 ### Fitur pengayaan (dipilih: **API RESTful aman dengan JWT HMAC-SHA512**)
-
 - `POST /api/v1/token` — menukar API key/secret dengan token JWT (HS512)
 - `POST /api/v1/encrypt`, `POST /api/v1/decrypt` — dilindungi `Authorization: Bearer <token>`
 - Selaras dengan riset dosen pengampu (Rahmatulloh dkk., 2018 — JWT HMAC-SHA512).
@@ -80,7 +88,6 @@ salt, nonce) disimpan di dalam blob itu sendiri — sehingga cukup satu berkas
 ## 4. Instalasi
 
 ### Prasyarat
-
 - Python 3.10 atau lebih baru
 - pip
 
@@ -192,9 +199,9 @@ dijalankan dari UI dan hasilnya di-screenshot/disalin ke laporan serta file Exce
   lewat tab "Berkas", catat hasil berhasil/gagal pada tabel di laporan.
 - **Waktu proses (1 KB/1 MB/10 MB)**: tab "Analisis" → "Benchmark Waktu".
 - **Avalanche effect**: tab "Analisis" → bagian ini. **Penting untuk dianalisis di
-  laporan**: karena AES-GCM dan ChaCha20-Poly1305 adalah mode _stream_ (berbasis
+  laporan**: karena AES-GCM dan ChaCha20-Poly1305 adalah mode *stream* (berbasis
   counter), membalik 1 bit plainteks hanya mengubah 1 bit yang bersesuaian pada
-  _badan_ cipherteks (bukan menyebar seperti cipher blok berantai/CBC klasik).
+  *badan* cipherteks (bukan menyebar seperti cipher blok berantai/CBC klasik).
   Difusi sesungguhnya terlihat pada **authentication tag**, yang berubah signifikan
   (idealnya mendekati 50%). Aplikasi ini secara eksplisit memisahkan dan melaporkan
   ketiga angka (badan, tag, gabungan) agar dapat dianalisis dan diinterpretasikan

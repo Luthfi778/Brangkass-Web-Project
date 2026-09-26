@@ -136,12 +136,16 @@ def api_encrypt_file():
         return jsonify({"error": str(exc)}), 400
 
     out_name = f.filename + ".brks"
-    return send_file(
+    response = send_file(
         io.BytesIO(result.blob),
         as_attachment=True,
         download_name=out_name,
         mimetype="application/octet-stream",
     )
+    response.headers["X-Elapsed-Ms"] = f"{result.elapsed_ms:.3f}"
+    response.headers["X-Input-Bytes"] = str(len(raw))
+    response.headers["Access-Control-Expose-Headers"] = "X-Elapsed-Ms, X-Input-Bytes"
+    return response
 
 
 @app.post("/api/decrypt-file")
@@ -161,12 +165,16 @@ def api_decrypt_file():
         return jsonify({"error": f"Gagal memproses berkas: {exc}"}), 400
 
     out_name = f.filename[:-5] if f.filename.endswith(".brks") else f"dekripsi_{f.filename}"
-    return send_file(
+    response = send_file(
         io.BytesIO(result.plaintext),
         as_attachment=True,
         download_name=out_name,
         mimetype="application/octet-stream",
     )
+    response.headers["X-Elapsed-Ms"] = f"{result.elapsed_ms:.3f}"
+    response.headers["X-Output-Bytes"] = str(len(result.plaintext))
+    response.headers["Access-Control-Expose-Headers"] = "X-Elapsed-Ms, X-Output-Bytes"
+    return response
 
 
 # --------------------------------------------------------------------------- #

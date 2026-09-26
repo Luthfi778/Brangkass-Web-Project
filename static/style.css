@@ -1,15 +1,35 @@
+/* =========================================================================
+   Brangkass — desain "vault": kertas terang di luar, panel gelap ("dalam
+   vault") untuk setiap keluaran data (cipherteks, JSON, tabel, grafik).
+   Tipografi: Space Grotesk (judul) + IBM Plex Sans (UI) + IBM Plex Mono
+   (semua data kriptografi: hex, base64, angka, JSON) — dipilih karena
+   subjeknya memang data teknis, bukan hiasan.
+   ========================================================================= */
+
 :root {
-  --bg: #0f1420;
-  --panel: #171e2e;
-  --panel-2: #1e2740;
-  --border: #2a3450;
-  --text: #e7ecf7;
-  --text-dim: #9aa7c2;
-  --accent: #5b8cff;
-  --accent-2: #33d69f;
-  --danger: #ff5d6c;
-  --radius: 10px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --bg: #EEF0F1;
+  --surface: #FFFFFF;
+  --ink: #14171C;
+  --ink-dim: #5B6270;
+  --border: #DBDFE3;
+
+  --accent: #9C7A3C;      /* kuningan/brass — motif gembok & vault */
+  --accent-ink: #6E5527;
+  --accent-soft: #F1E9D8;
+
+  --vault-bg: #15181D;    /* panel "dalam vault" untuk semua keluaran */
+  --vault-bg-2: #1D2129;
+  --vault-border: #303540;
+  --vault-text: #E9E6DE;
+  --vault-text-dim: #9AA0AC;
+
+  --success: #2F7A4F;
+  --danger: #B3402B;
+
+  --radius: 6px;
+  --font-display: "Space Grotesk", "IBM Plex Sans", sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 * { box-sizing: border-box; }
@@ -17,130 +37,227 @@
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--text);
+  color: var(--ink);
+  font-family: var(--font-body);
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* ---------------------------- Header ---------------------------------- */
 .topbar {
-  padding: 24px 32px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 28px 32px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
-.brand { font-size: 1.6rem; font-weight: 700; }
-.subtitle { color: var(--text-dim); margin-top: 4px; font-size: 0.9rem; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.brand svg { flex-shrink: 0; }
+.subtitle { color: var(--ink-dim); font-size: 0.92rem; }
 
+/* ------------------------------ Tabs ----------------------------------- */
 .tabs {
   display: flex;
   gap: 4px;
-  padding: 12px 32px 0;
+  padding: 0 32px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
   overflow-x: auto;
 }
 .tab-btn {
   background: transparent;
   border: none;
-  color: var(--text-dim);
-  padding: 10px 16px;
-  cursor: pointer;
-  font-size: 0.95rem;
   border-bottom: 2px solid transparent;
+  color: var(--ink-dim);
+  padding: 13px 4px;
+  margin-right: 26px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 500;
   white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
-.tab-btn.active {
-  color: var(--text);
-  border-bottom: 2px solid var(--accent);
-}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--ink); border-bottom-color: var(--accent); }
 
-main { padding: 24px 32px 64px; max-width: 1100px; margin: 0 auto; }
-
+/* ------------------------------ Layout --------------------------------- */
+main { padding: 28px 32px 72px; max-width: 1120px; margin: 0 auto; }
 .tab-panel { display: none; }
-.tab-panel.active { display: block; }
+.tab-panel.active { display: block; animation: fadein 0.18s ease; }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-@media (max-width: 800px) {
-  .grid-2 { grid-template-columns: 1fr; }
-}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
 
 .card {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 22px 24px;
   margin-bottom: 20px;
 }
-.card h2 { margin-top: 0; font-size: 1.1rem; }
+.card h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.card > p.hint:first-of-type { margin-top: 4px; }
 
-label { display: block; margin: 12px 0 4px; font-size: 0.85rem; color: var(--text-dim); }
+/* ----------------------------- Form controls ---------------------------- */
+label { display: block; margin: 14px 0 6px; font-size: 0.82rem; color: var(--ink-dim); }
 
-input[type=text], input[type=password], input[type=number], input:not([type]), textarea, select {
+input[type=text], input[type=password], input[type=number], input:not([type]),
+textarea, select {
   width: 100%;
   padding: 10px 12px;
-  background: var(--panel-2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 0.95rem;
-  font-family: inherit;
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.93rem;
+  transition: border-color 0.15s ease;
 }
-textarea { resize: vertical; font-family: ui-monospace, monospace; font-size: 0.85rem; }
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea { resize: vertical; font-family: var(--font-mono); font-size: 0.83rem; }
+input[type=file] { font-size: 0.88rem; padding: 8px 0; }
 
 .row { display: flex; gap: 16px; }
 .row > div { flex: 1; }
 
+/* -------------------------------- Buttons -------------------------------- */
 .btn {
-  margin-top: 14px;
+  margin-top: 16px;
   padding: 10px 18px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--panel-2);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.87rem;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.small { padding: 6px 12px; font-size: 0.8rem; margin-top: 6px; }
+.btn:hover { border-color: var(--ink-dim); }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.btn.primary:hover { background: #000; }
+.btn.accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.accent:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn.small { padding: 7px 13px; font-size: 0.8rem; margin-top: 8px; }
+.btn.xlsx { display: inline-flex; align-items: center; gap: 6px; }
+.btn.xlsx svg { flex-shrink: 0; }
 
 .hidden { display: none !important; }
 
-.result { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border); }
-.meta { color: var(--text-dim); font-size: 0.85rem; }
-.error { color: var(--danger); margin-top: 12px; font-size: 0.9rem; }
+/* -------------------------------- Results -------------------------------- */
+.result { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.meta { color: var(--ink-dim); font-size: 0.83rem; font-family: var(--font-mono); }
+.error {
+  color: var(--danger);
+  margin-top: 14px;
+  font-size: 0.88rem;
+  padding: 10px 12px;
+  background: #FBEEEA;
+  border: 1px solid #EFD3C9;
+  border-radius: var(--radius);
+}
+.hint { color: var(--ink-dim); font-size: 0.82rem; }
 
-.hint { color: var(--text-dim); font-size: 0.82rem; }
+/* Timing badge — dipakai untuk menampilkan waktu eksekusi di setiap operasi */
+.timing {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.timing svg { flex-shrink: 0; }
 
+/* ------------------------- Panel "dalam vault" ---------------------------
+   Semua keluaran data mentah (cipherteks, JSON, log) memakai panel gelap
+   ini — motif visual utama halaman: kertas terang di luar, brankas gelap
+   berisi datanya di dalam. */
 .output {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
+  background: var(--vault-bg);
+  color: var(--vault-text);
+  border: 1px solid var(--vault-border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 260px;
+  max-height: 280px;
   overflow: auto;
 }
+textarea[readonly] {
+  background: var(--vault-bg);
+  color: var(--vault-text);
+  border-color: var(--vault-border);
+}
 
-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; font-size: 0.88rem; }
+/* --------------------------------- Table ---------------------------------- */
+.table-wrap { overflow-x: auto; margin-top: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+th, td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+th {
+  font-weight: 600;
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  text-transform: none;
+}
+td { font-family: var(--font-mono); }
+td:first-child, th:first-child { font-family: var(--font-body); }
 
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+.table-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
 @media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }
+
+ol { padding-left: 20px; line-height: 1.7; }
+ol li::marker { color: var(--accent-ink); font-weight: 600; }
 
 footer {
   text-align: center;
-  color: var(--text-dim);
+  color: var(--ink-dim);
   font-size: 0.78rem;
-  padding: 24px;
+  padding: 26px;
   border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 
 code {
-  background: var(--panel-2);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   padding: 1px 6px;
   border-radius: 4px;
+  font-family: var(--font-mono);
   font-size: 0.85em;
 }
