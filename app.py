@@ -178,7 +178,7 @@ def api_decrypt_file():
 
 
 # --------------------------------------------------------------------------- #
-# API: Analisis & Pengujian (avalanche, entropi, histogram, benchmark, compare)
+# API: Analisis & Pengujian (avalanche, entropi, histogram, benchmark)
 # --------------------------------------------------------------------------- #
 @app.post("/api/analysis/avalanche")
 def api_avalanche():
@@ -232,28 +232,6 @@ def api_benchmark():
     sizes = [1 * 1024, 1 * 1024 * 1024, 10 * 1024 * 1024]  # 1 KB, 1 MB, 10 MB
     results = cu.benchmark_sizes(algo_id, kdf_id, password, sizes)
     return jsonify({"algorithm": cu.ALGO_NAMES[algo_id], "results": results})
-
-
-@app.post("/api/analysis/compare")
-def api_compare():
-    """Membandingkan AES-256-GCM vs ChaCha20-Poly1305 pada ukuran data yang sama."""
-    data = request.get_json(force=True)
-    password = data.get("password", "kata-sandi-uji")
-    size_kb = int(data.get("size_kb", 256))
-    size_bytes = max(1024, size_kb * 1024)
-
-    sample = os.urandom(size_bytes)
-    comparison = []
-    for algo_id in (cu.ALGO_AES_GCM, cu.ALGO_CHACHA20_POLY1305):
-        enc = cu.encrypt_blob(sample, password, algo_id, cu.KDF_PBKDF2)
-        t_dec = cu.decrypt_blob(enc.blob, password)
-        comparison.append({
-            "algorithm": cu.ALGO_NAMES[algo_id],
-            "size_bytes": size_bytes,
-            "encrypt_ms": round(enc.elapsed_ms, 3),
-            "decrypt_ms": round(t_dec.elapsed_ms, 3),
-        })
-    return jsonify({"comparison": comparison})
 
 
 @app.post("/api/analysis/tamper-test")

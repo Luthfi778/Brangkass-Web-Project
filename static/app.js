@@ -1,14 +1,47 @@
 // ---------------------------------------------------------------------------
-// Navigasi tab
+// Navigasi sidebar
 // ---------------------------------------------------------------------------
-document.querySelectorAll(".tab-btn").forEach(btn => {
+document.querySelectorAll(".nav-btn").forEach(btn => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(pnl => pnl.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Mode terang / gelap
+// ---------------------------------------------------------------------------
+function applyThemeUI(theme) {
+  document.getElementById("theme-icon-sun").classList.toggle("hidden", theme === "dark");
+  document.getElementById("theme-icon-moon").classList.toggle("hidden", theme !== "dark");
+  document.getElementById("theme-label").textContent = theme === "dark" ? "Mode terang" : "Mode gelap";
+}
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  if (next === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  localStorage.setItem("brangkas-theme", next);
+  applyThemeUI(next);
+}
+applyThemeUI(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light");
+
+// ---------------------------------------------------------------------------
+// Tampilkan / sembunyikan kata sandi
+// ---------------------------------------------------------------------------
+function togglePassword(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === "password";
+  input.type = isHidden ? "text" : "password";
+  btn.innerHTML = isHidden
+    ? '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.4 5.5A10.8 10.8 0 0 1 12 5c7 0 11 7 11 7a13.6 13.6 0 0 1-3.1 3.6M6.3 6.9C3.7 8.6 2 12 2 12s4 7 11 7a10.7 10.7 0 0 0 3.4-.6"/></svg>'
+    : '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
 
 function copyText(id) {
   const el = document.getElementById(id);
@@ -27,7 +60,6 @@ async function postJSON(url, body) {
   return data;
 }
 
-// Menampilkan badge waktu eksekusi (dipakai di semua operasi kriptografi)
 function showTiming(elId, ms, label) {
   const el = document.getElementById(elId);
   if (!el) return;
@@ -38,14 +70,54 @@ function showTiming(elId, ms, label) {
     `${label || "Waktu eksekusi"}: ${Number(ms).toFixed(3)} ms`;
 }
 
-// Penyimpanan hasil uji terakhir, dipakai oleh tombol "Unduh semua hasil uji"
-const testResults = {
-  tamper: null,
-  avalanche: null,
-  entropy: null,
-  benchmark: null,
-  compare: null,
-};
+const testResults = { tamper: null, avalanche: null, entropy: null, benchmark: null };
+
+// ---------------------------------------------------------------------------
+// Preview berkas (gambar / generik)
+// ---------------------------------------------------------------------------
+const IMAGE_EXT = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"];
+
+function fileIconSVG() {
+  return '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7">' +
+    '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+}
+
+function renderPreview(container, { name, size, url, isImage }) {
+  container.innerHTML = `
+    <div class="file-preview">
+      ${isImage && url
+        ? `<img src="${url}" alt="preview">`
+        : `<div class="file-icon">${fileIconSVG()}</div>`}
+      <div class="file-meta">
+        <div class="file-name">${name}</div>
+        <div class="file-size">${formatBytes(size)}</div>
+      </div>
+    </div>`;
+}
+
+function previewFile(inputId, containerId) {
+  const input = document.getElementById(inputId);
+  const container = document.getElementById(containerId);
+  if (!input.files.length) { container.innerHTML = ""; return; }
+  const file = input.files[0];
+  const ext = file.name.split(".").pop().toLowerCase();
+  const isImage = file.type.startsWith("image/") || IMAGE_EXT.includes(ext);
+
+  if (isImage) {
+    const reader = new FileReader();
+    reader.onload = e => renderPreview(container, { name: file.name, size: file.size, url: e.target.result, isImage: true });
+    reader.readAsDataURL(file);
+  } else {
+    renderPreview(container, { name: file.name, size: file.size, isImage: false });
+  }
+}
+
+function formatBytes(n) {
+  n = Number(n) || 0;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 ** 2).toFixed(1)} MB`;
+}
 
 // ---------------------------------------------------------------------------
 // TEKS
@@ -113,8 +185,7 @@ async function encryptFile() {
   const elapsed = res.headers.get("X-Elapsed-Ms");
   const inputBytes = res.headers.get("X-Input-Bytes");
   document.getElementById("enc-file-result").classList.remove("hidden");
-  showTiming("enc-file-timing", elapsed || 0,
-    `Waktu enkripsi (${formatBytes(inputBytes)})`);
+  showTiming("enc-file-timing", elapsed || 0, `Waktu enkripsi (${formatBytes(inputBytes)})`);
 
   const blob = await res.blob();
   downloadBlob(blob, fileInput.files[0].name + ".brks");
@@ -124,7 +195,9 @@ async function decryptFile() {
   const fileInput = document.getElementById("dec-file-input");
   const password = document.getElementById("dec-file-password").value;
   const errBox = document.getElementById("dec-file-error");
+  const previewBox = document.getElementById("dec-file-preview");
   errBox.classList.add("hidden");
+  previewBox.innerHTML = "";
   if (!fileInput.files.length || !password) { alert("Pilih berkas .brks dan isi kata sandi."); return; }
 
   const form = new FormData();
@@ -141,21 +214,19 @@ async function decryptFile() {
   const elapsed = res.headers.get("X-Elapsed-Ms");
   const outputBytes = res.headers.get("X-Output-Bytes");
   document.getElementById("dec-file-result").classList.remove("hidden");
-  showTiming("dec-file-timing", elapsed || 0,
-    `Waktu dekripsi (${formatBytes(outputBytes)})`);
+  showTiming("dec-file-timing", elapsed || 0, `Waktu dekripsi (${formatBytes(outputBytes)})`);
 
   const blob = await res.blob();
   const name = fileInput.files[0].name.endsWith(".brks")
     ? fileInput.files[0].name.slice(0, -5)
     : "dekripsi_" + fileInput.files[0].name;
-  downloadBlob(blob, name);
-}
 
-function formatBytes(n) {
-  n = Number(n) || 0;
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
-  return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  const ext = name.split(".").pop().toLowerCase();
+  const isImage = IMAGE_EXT.includes(ext);
+  const objectUrl = URL.createObjectURL(blob);
+  renderPreview(previewBox, { name, size: blob.size, url: objectUrl, isImage });
+
+  downloadBlob(blob, name);
 }
 
 function downloadBlob(blob, filename) {
@@ -166,7 +237,6 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
 }
 
 // ---------------------------------------------------------------------------
@@ -182,7 +252,7 @@ async function runTamperTest() {
     const elapsed = performance.now() - t0;
     document.getElementById("tamper-out").textContent = JSON.stringify(data, null, 2);
     showTiming("tamper-timing", elapsed, "Waktu pengujian (round-trip)");
-    testResults.tamper = { input: { sample_text, password, wrong_password }, output: data, elapsed_ms: elapsed };
+    testResults.tamper = { output: data };
     document.getElementById("tamper-xlsx-btn").classList.remove("hidden");
   } catch (e) {
     document.getElementById("tamper-out").textContent = "Error: " + e.message;
@@ -202,7 +272,7 @@ async function runAvalanche() {
       `Authentication tag: ${data.tag_diff_bits}/${data.tag_bits} bit (${data.tag_percent_changed}%)\n\n` +
       `Catatan: ${data.note}`;
     showTiming("ava-timing", elapsed, "Waktu pengujian");
-    testResults.avalanche = { input: { algorithm, mode }, output: data, elapsed_ms: elapsed };
+    testResults.avalanche = { output: data };
     document.getElementById("ava-xlsx-btn").classList.remove("hidden");
   } catch (e) {
     document.getElementById("ava-out").textContent = "Error: " + e.message;
@@ -224,31 +294,34 @@ async function runEntropy() {
     if (plainHistChart) plainHistChart.destroy();
     if (cipherHistChart) cipherHistChart.destroy();
 
+    const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+    const textColor = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+
     plainHistChart = new Chart(document.getElementById("chart-plain-hist"), {
       type: "bar",
-      data: { labels, datasets: [{ label: "Histogram Plainteks", data: data.plaintext_histogram, backgroundColor: "#9C7A3C" }] },
-      options: baseChartOptions("Histogram byte — plainteks"),
+      data: { labels, datasets: [{ label: "Histogram Plainteks", data: data.plaintext_histogram, backgroundColor: "#4F46E5" }] },
+      options: baseChartOptions("Histogram byte — plainteks", textColor, gridColor),
     });
     cipherHistChart = new Chart(document.getElementById("chart-cipher-hist"), {
       type: "bar",
-      data: { labels, datasets: [{ label: "Histogram Cipherteks", data: data.ciphertext_histogram, backgroundColor: "#14171C" }] },
-      options: baseChartOptions("Histogram byte — cipherteks (harus rata)"),
+      data: { labels, datasets: [{ label: "Histogram Cipherteks", data: data.ciphertext_histogram, backgroundColor: "#16A34A" }] },
+      options: baseChartOptions("Histogram byte — cipherteks (harus rata)", textColor, gridColor),
     });
 
-    testResults.entropy = { input: { sample_text }, output: data, elapsed_ms: elapsed };
+    testResults.entropy = { output: data };
     document.getElementById("entropy-xlsx-btn").classList.remove("hidden");
   } catch (e) {
     alert(e.message);
   }
 }
 
-function baseChartOptions(title) {
+function baseChartOptions(title, textColor, gridColor) {
   return {
     responsive: true,
-    plugins: { legend: { display: false }, title: { display: true, text: title, color: "#14171C", font: { family: "IBM Plex Sans" } } },
+    plugins: { legend: { display: false }, title: { display: true, text: title, color: textColor || "#171922" } },
     scales: {
       x: { display: false },
-      y: { ticks: { color: "#5B6270" }, grid: { color: "#DBDFE3" } },
+      y: { ticks: { color: textColor }, grid: { color: gridColor } },
     },
   };
 }
@@ -271,7 +344,7 @@ async function runBenchmark() {
     table.classList.remove("hidden");
     showTiming("bench-timing", elapsed, "Total waktu benchmark");
 
-    testResults.benchmark = { input: { algorithm, kdf }, output: data, elapsed_ms: elapsed };
+    testResults.benchmark = { output: data };
     document.getElementById("bench-xlsx-btn").classList.remove("hidden");
   } catch (e) {
     alert(e.message);
@@ -279,94 +352,41 @@ async function runBenchmark() {
 }
 
 // ---------------------------------------------------------------------------
-// PERBANDINGAN ALGORITMA
+// EKSPOR EXCEL (SheetJS)
 // ---------------------------------------------------------------------------
-let compareChart;
-async function runCompare() {
-  const size_kb = document.getElementById("cmp-size").value;
-  const t0 = performance.now();
-  try {
-    const data = await postJSON("/api/analysis/compare", { size_kb });
-    const elapsed = performance.now() - t0;
-    const labels = data.comparison.map(c => c.algorithm);
-    const encTimes = data.comparison.map(c => c.encrypt_ms);
-    const decTimes = data.comparison.map(c => c.decrypt_ms);
-
-    if (compareChart) compareChart.destroy();
-    compareChart = new Chart(document.getElementById("chart-compare"), {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          { label: "Waktu enkripsi (ms)", data: encTimes, backgroundColor: "#9C7A3C" },
-          { label: "Waktu dekripsi (ms)", data: decTimes, backgroundColor: "#14171C" },
-        ],
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { labels: { color: "#14171C", font: { family: "IBM Plex Sans" } } },
-          title: { display: true, text: `Perbandingan pada ${size_kb} KB data`, color: "#14171C", font: { family: "IBM Plex Sans" } },
-        },
-        scales: {
-          x: { ticks: { color: "#5B6270" }, grid: { color: "#DBDFE3" } },
-          y: { ticks: { color: "#5B6270" }, grid: { color: "#DBDFE3" } },
-        },
-      },
-    });
-    showTiming("cmp-timing", elapsed, "Total waktu perbandingan");
-
-    testResults.compare = { input: { size_kb }, output: data, elapsed_ms: elapsed };
-    document.getElementById("cmp-xlsx-btn").classList.remove("hidden");
-  } catch (e) {
-    alert(e.message);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// EKSPOR EXCEL (SheetJS) — memenuhi ketentuan luaran "Data Pengujian .xlsx"
-// ---------------------------------------------------------------------------
-function downloadWorkbook(wb, filename) {
-  XLSX.writeFile(wb, filename);
-}
+function downloadWorkbook(wb, filename) { XLSX.writeFile(wb, filename); }
 
 function exportTamperExcel() {
   const r = testResults.tamper;
   if (!r) return;
   const rows = Object.entries(r.output).map(([skenario, hasil]) => ({ Skenario: skenario, Hasil: hasil }));
-  const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Uji Ketahanan");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Uji Ketahanan");
   downloadWorkbook(wb, "brangkass_uji_ketahanan.xlsx");
 }
 
 function exportAvalancheExcel() {
-  const r = testResults.avalanche;
-  if (!r) return;
-  const d = r.output;
+  const d = testResults.avalanche?.output;
+  if (!d) return;
   const rows = [
     { Bagian: "Gabungan (total)", "Bit Total": d.total_bits, "Bit Berbeda": d.diff_bits, "Persentase (%)": d.percent_changed },
     { Bagian: "Badan cipherteks", "Bit Total": d.body_bits, "Bit Berbeda": d.body_diff_bits, "Persentase (%)": d.body_percent_changed },
     { Bagian: "Authentication tag", "Bit Total": d.tag_bits, "Bit Berbeda": d.tag_diff_bits, "Persentase (%)": d.tag_percent_changed },
   ];
-  const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Avalanche Effect");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Avalanche Effect");
   downloadWorkbook(wb, "brangkass_avalanche_effect.xlsx");
 }
 
 function exportEntropyExcel() {
-  const r = testResults.entropy;
-  if (!r) return;
-  const d = r.output;
+  const d = testResults.entropy?.output;
+  if (!d) return;
   const summary = [
     { Jenis: "Plainteks", "Entropi (bit/byte)": d.plaintext_entropy },
     { Jenis: "Cipherteks", "Entropi (bit/byte)": d.ciphertext_entropy },
   ];
   const histRows = Array.from({ length: 256 }, (_, i) => ({
-    "Nilai Byte": i,
-    "Frekuensi Plainteks": d.plaintext_histogram[i],
-    "Frekuensi Cipherteks": d.ciphertext_histogram[i],
+    "Nilai Byte": i, "Frekuensi Plainteks": d.plaintext_histogram[i], "Frekuensi Cipherteks": d.ciphertext_histogram[i],
   }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Ringkasan Entropi");
@@ -377,38 +397,15 @@ function exportEntropyExcel() {
 function exportBenchmarkExcel() {
   const r = testResults.benchmark;
   if (!r) return;
-  const rows = r.output.results.map(x => ({
-    "Ukuran Data": x.size_label,
-    "Waktu Enkripsi (ms)": x.encrypt_ms,
-    "Waktu Dekripsi (ms)": x.decrypt_ms,
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const rows = r.output.results.map(x => ({ "Ukuran Data": x.size_label, "Waktu Enkripsi (ms)": x.encrypt_ms, "Waktu Dekripsi (ms)": x.decrypt_ms }));
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Benchmark ${r.output.algorithm}`);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), `Benchmark ${r.output.algorithm}`);
   downloadWorkbook(wb, "brangkass_benchmark_waktu.xlsx");
-}
-
-function exportCompareExcel() {
-  const r = testResults.compare;
-  if (!r) return;
-  const rows = r.output.comparison.map(x => ({
-    Algoritma: x.algorithm,
-    "Ukuran (byte)": x.size_bytes,
-    "Waktu Enkripsi (ms)": x.encrypt_ms,
-    "Waktu Dekripsi (ms)": x.decrypt_ms,
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Perbandingan Algoritma");
-  downloadWorkbook(wb, "brangkass_perbandingan_algoritma.xlsx");
 }
 
 function exportAllExcel() {
   const anyResult = Object.values(testResults).some(v => v !== null);
-  if (!anyResult) {
-    alert("Belum ada hasil uji yang dijalankan. Jalankan minimal satu pengujian di atas terlebih dahulu.");
-    return;
-  }
+  if (!anyResult) { alert("Belum ada hasil uji yang dijalankan. Jalankan minimal satu pengujian di atas terlebih dahulu."); return; }
   const wb = XLSX.utils.book_new();
 
   if (testResults.tamper) {
@@ -432,30 +429,14 @@ function exportAllExcel() {
     ];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), "Ringkasan Entropi");
     const histRows = Array.from({ length: 256 }, (_, i) => ({
-      "Nilai Byte": i,
-      "Frekuensi Plainteks": d.plaintext_histogram[i],
-      "Frekuensi Cipherteks": d.ciphertext_histogram[i],
+      "Nilai Byte": i, "Frekuensi Plainteks": d.plaintext_histogram[i], "Frekuensi Cipherteks": d.ciphertext_histogram[i],
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(histRows), "Histogram Byte");
   }
   if (testResults.benchmark) {
-    const rows = testResults.benchmark.output.results.map(x => ({
-      "Ukuran Data": x.size_label,
-      "Waktu Enkripsi (ms)": x.encrypt_ms,
-      "Waktu Dekripsi (ms)": x.decrypt_ms,
-    }));
+    const rows = testResults.benchmark.output.results.map(x => ({ "Ukuran Data": x.size_label, "Waktu Enkripsi (ms)": x.encrypt_ms, "Waktu Dekripsi (ms)": x.decrypt_ms }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Benchmark Waktu");
   }
-  if (testResults.compare) {
-    const rows = testResults.compare.output.comparison.map(x => ({
-      Algoritma: x.algorithm,
-      "Ukuran (byte)": x.size_bytes,
-      "Waktu Enkripsi (ms)": x.encrypt_ms,
-      "Waktu Dekripsi (ms)": x.decrypt_ms,
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Perbandingan Algoritma");
-  }
-
   downloadWorkbook(wb, "brangkass_data_pengujian.xlsx");
 }
 
