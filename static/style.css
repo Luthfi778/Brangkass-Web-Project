@@ -302,7 +302,15 @@ td:first-child, th:first-child { font-family: var(--font-body); }
 
 .table-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; flex-wrap: wrap; gap: 8px; }
 
-.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; min-width: 0; }
+.chart-grid .chart-box {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: 240px;
+  overflow: hidden;
+}
+.chart-grid .chart-box canvas { width: 100% !important; height: 100% !important; }
 @media (max-width: 800px) { .chart-grid { grid-template-columns: 1fr; } }
 
 /* ------------------------------ File preview ------------------------------ */
