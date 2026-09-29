@@ -163,12 +163,16 @@ async function decryptText() {
 // ---------------------------------------------------------------------------
 // BERKAS
 // ---------------------------------------------------------------------------
+let pendingEncFile = null;  // { blob, filename } menunggu diunduh manual
+let pendingDecFile = null;
+
 async function encryptFile() {
   const fileInput = document.getElementById("enc-file-input");
   const password = document.getElementById("enc-file-password").value;
   const algorithm = document.getElementById("enc-file-algo").value;
   const kdf = document.getElementById("enc-file-kdf").value;
   if (!fileInput.files.length || !password) { alert("Pilih berkas dan isi kata sandi."); return; }
+  document.getElementById("enc-file-download-btn").classList.add("hidden");
 
   const form = new FormData();
   form.append("file", fileInput.files[0]);
@@ -188,7 +192,13 @@ async function encryptFile() {
   showTiming("enc-file-timing", elapsed || 0, `Waktu enkripsi (${formatBytes(inputBytes)})`);
 
   const blob = await res.blob();
-  downloadBlob(blob, fileInput.files[0].name + ".brks");
+  pendingEncFile = { blob, filename: fileInput.files[0].name + ".brks" };
+  document.getElementById("enc-file-download-btn").classList.remove("hidden");
+}
+
+function downloadEncFile() {
+  if (!pendingEncFile) return;
+  downloadBlob(pendingEncFile.blob, pendingEncFile.filename);
 }
 
 async function decryptFile() {
@@ -198,6 +208,7 @@ async function decryptFile() {
   const previewBox = document.getElementById("dec-file-preview");
   errBox.classList.add("hidden");
   previewBox.innerHTML = "";
+  document.getElementById("dec-file-download-btn").classList.add("hidden");
   if (!fileInput.files.length || !password) { alert("Pilih berkas .brks dan isi kata sandi."); return; }
 
   const form = new FormData();
@@ -225,8 +236,13 @@ async function decryptFile() {
   const isImage = IMAGE_EXT.includes(ext);
   const objectUrl = URL.createObjectURL(blob);
   renderPreview(previewBox, { name, size: blob.size, url: objectUrl, isImage });
+  pendingDecFile = { blob, filename: name };
+  document.getElementById("dec-file-download-btn").classList.remove("hidden");
+}
 
-  downloadBlob(blob, name);
+function downloadDecFile() {
+  if (!pendingDecFile) return;
+  downloadBlob(pendingDecFile.blob, pendingDecFile.filename);
 }
 
 function downloadBlob(blob, filename) {
@@ -280,6 +296,46 @@ async function runAvalanche() {
 }
 
 let plainHistChart, cipherHistChart;
+
+// Pustaka Chart.js dimuat dari berkas lokal (static/vendor), bukan CDN, supaya
+// tidak gagal ketika jaringan pengguna memblokir domain CDN eksternal. Sebagai
+// lapisan pengaman tambahan, bila karena suatu sebab Chart.js tetap gagal
+// dimuat, histogram digambar manual langsung ke elemen <canvas> agar diagram
+// tetap tampil alih-alih menampilkan error "Chart is not defined".
+function isChartJsAvailable() {
+  return typeof Chart !== "undefined";
+}
+
+function drawHistogramFallback(canvasId, values, color, title) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+  const cssWidth = canvas.parentElement.clientWidth || 480;
+  const cssHeight = canvas.parentElement.clientHeight || 220;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = cssWidth * dpr;
+  canvas.height = cssHeight * dpr;
+  canvas.style.width = cssWidth + "px";
+  canvas.style.height = cssHeight + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const padTop = 28, padBottom = 6, padSide = 4;
+  const max = Math.max(1, ...values);
+  const plotW = cssWidth - padSide * 2;
+  const plotH = cssHeight - padTop - padBottom;
+  const barW = plotW / values.length;
+
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#171922";
+  ctx.font = "600 12px 'IBM Plex Sans', sans-serif";
+  ctx.fillText(title, padSide, 16);
+
+  ctx.fillStyle = color;
+  values.forEach((v, i) => {
+    const h = (v / max) * plotH;
+    ctx.fillRect(padSide + i * barW, padTop + (plotH - h), Math.max(1, barW - 0.5), h);
+  });
+}
+
 async function runEntropy() {
   const sample_text = document.getElementById("entropy-text").value;
   const t0 = performance.now();
@@ -290,23 +346,29 @@ async function runEntropy() {
       `Entropi plainteks: ${data.plaintext_entropy} bit/byte  |  Entropi cipherteks: ${data.ciphertext_entropy} bit/byte (maks. 8.0)`;
     showTiming("entropy-timing", elapsed, "Waktu pengujian");
 
-    const labels = Array.from({ length: 256 }, (_, i) => i);
-    if (plainHistChart) plainHistChart.destroy();
-    if (cipherHistChart) cipherHistChart.destroy();
+    if (isChartJsAvailable()) {
+      const labels = Array.from({ length: 256 }, (_, i) => i);
+      if (plainHistChart) plainHistChart.destroy();
+      if (cipherHistChart) cipherHistChart.destroy();
 
-    const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
-    const textColor = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
+      const gridColor = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+      const textColor = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
 
-    plainHistChart = new Chart(document.getElementById("chart-plain-hist"), {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Histogram Plainteks", data: data.plaintext_histogram, backgroundColor: "#4F46E5" }] },
-      options: baseChartOptions("Histogram byte — plainteks", textColor, gridColor),
-    });
-    cipherHistChart = new Chart(document.getElementById("chart-cipher-hist"), {
-      type: "bar",
-      data: { labels, datasets: [{ label: "Histogram Cipherteks", data: data.ciphertext_histogram, backgroundColor: "#16A34A" }] },
-      options: baseChartOptions("Histogram byte — cipherteks (harus rata)", textColor, gridColor),
-    });
+      plainHistChart = new Chart(document.getElementById("chart-plain-hist"), {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Histogram Plainteks", data: data.plaintext_histogram, backgroundColor: "#4F46E5" }] },
+        options: baseChartOptions("Histogram byte — plainteks", textColor, gridColor),
+      });
+      cipherHistChart = new Chart(document.getElementById("chart-cipher-hist"), {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Histogram Cipherteks", data: data.ciphertext_histogram, backgroundColor: "#16A34A" }] },
+        options: baseChartOptions("Histogram byte — cipherteks (harus rata)", textColor, gridColor),
+      });
+    } else {
+      // Cadangan tanpa Chart.js: gambar histogram manual di canvas
+      drawHistogramFallback("chart-plain-hist", data.plaintext_histogram, "#4F46E5", "Histogram byte — plainteks");
+      drawHistogramFallback("chart-cipher-hist", data.ciphertext_histogram, "#16A34A", "Histogram byte — cipherteks");
+    }
 
     testResults.entropy = { output: data };
     document.getElementById("entropy-xlsx-btn").classList.remove("hidden");
@@ -318,6 +380,7 @@ async function runEntropy() {
 function baseChartOptions(title, textColor, gridColor) {
   return {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: { legend: { display: false }, title: { display: true, text: title, color: textColor || "#171922" } },
     scales: {
       x: { display: false },
@@ -354,9 +417,19 @@ async function runBenchmark() {
 // ---------------------------------------------------------------------------
 // EKSPOR EXCEL (SheetJS)
 // ---------------------------------------------------------------------------
-function downloadWorkbook(wb, filename) { XLSX.writeFile(wb, filename); }
+function isXlsxAvailable() {
+  return typeof XLSX !== "undefined";
+}
+function downloadWorkbook(wb, filename) {
+  if (!isXlsxAvailable()) {
+    alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi.");
+    return;
+  }
+  XLSX.writeFile(wb, filename);
+}
 
 function exportTamperExcel() {
+  if (!isXlsxAvailable()) { alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi."); return; }
   const r = testResults.tamper;
   if (!r) return;
   const rows = Object.entries(r.output).map(([skenario, hasil]) => ({ Skenario: skenario, Hasil: hasil }));
@@ -366,6 +439,7 @@ function exportTamperExcel() {
 }
 
 function exportAvalancheExcel() {
+  if (!isXlsxAvailable()) { alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi."); return; }
   const d = testResults.avalanche?.output;
   if (!d) return;
   const rows = [
@@ -379,6 +453,7 @@ function exportAvalancheExcel() {
 }
 
 function exportEntropyExcel() {
+  if (!isXlsxAvailable()) { alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi."); return; }
   const d = testResults.entropy?.output;
   if (!d) return;
   const summary = [
@@ -395,6 +470,7 @@ function exportEntropyExcel() {
 }
 
 function exportBenchmarkExcel() {
+  if (!isXlsxAvailable()) { alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi."); return; }
   const r = testResults.benchmark;
   if (!r) return;
   const rows = r.output.results.map(x => ({ "Ukuran Data": x.size_label, "Waktu Enkripsi (ms)": x.encrypt_ms, "Waktu Dekripsi (ms)": x.decrypt_ms }));
@@ -404,6 +480,7 @@ function exportBenchmarkExcel() {
 }
 
 function exportAllExcel() {
+  if (!isXlsxAvailable()) { alert("Pustaka Excel (SheetJS) gagal dimuat. Muat ulang halaman (Ctrl/Cmd+Shift+R) dan coba lagi."); return; }
   const anyResult = Object.values(testResults).some(v => v !== null);
   if (!anyResult) { alert("Belum ada hasil uji yang dijalankan. Jalankan minimal satu pengujian di atas terlebih dahulu."); return; }
   const wb = XLSX.utils.book_new();

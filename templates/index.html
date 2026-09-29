@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+<script src="{{ url_for('static', filename='vendor/xlsx.full.min.js') }}"></script>
 <script>
   // Terapkan tema sedini mungkin agar tidak "berkedip" saat halaman dimuat
   (function () {
@@ -187,9 +187,12 @@
               </select>
             </div>
           </div>
-          <button class="btn primary" onclick="encryptFile()">Enkripsi &amp; unduh (.brks)</button>
-          <p class="hint">Berkas terenkripsi diunduh otomatis dengan ekstensi <code>.brks</code>.</p>
-          <div id="enc-file-result" class="hidden"><span class="timing" id="enc-file-timing"></span></div>
+          <button class="btn primary" onclick="encryptFile()">Enkripsi berkas</button>
+          <p class="hint">Setelah proses selesai, tombol unduh akan muncul di bawah.</p>
+          <div id="enc-file-result" class="hidden">
+            <span class="timing" id="enc-file-timing"></span>
+            <button class="btn small" id="enc-file-download-btn" onclick="downloadEncFile()">⬇ Unduh berkas (.brks)</button>
+          </div>
         </div>
 
         <div class="card">
@@ -203,15 +206,18 @@
               <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
-          <button class="btn primary" onclick="decryptFile()">Dekripsi &amp; unduh</button>
-          <div id="dec-file-result" class="hidden"><span class="timing" id="dec-file-timing"></span></div>
+          <button class="btn primary" onclick="decryptFile()">Dekripsi berkas</button>
+          <div id="dec-file-result" class="hidden">
+            <span class="timing" id="dec-file-timing"></span>
+            <button class="btn small" id="dec-file-download-btn" onclick="downloadDecFile()">⬇ Unduh berkas</button>
+          </div>
           <div id="dec-file-preview"></div>
           <div id="dec-file-error" class="error hidden"></div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Skenario Penggunaan</h2>
+        <h2>Skenario demo UTS</h2>
         <ol>
           <li>Unggah berkas PDF pada kolom "Enkripsi berkas", isi kata sandi, klik Enkripsi &amp; Unduh.</li>
           <li>Unggah hasil <code>.brks</code> pada kolom "Dekripsi berkas" dengan kata sandi yang <b>benar</b> → berkas kembali utuh (preview ditampilkan bila berupa gambar).</li>
@@ -269,8 +275,8 @@
         <span class="timing hidden" id="entropy-timing"></span>
         <p class="meta" id="entropy-summary"></p>
         <div class="chart-grid">
-          <canvas id="chart-plain-hist" height="160"></canvas>
-          <canvas id="chart-cipher-hist" height="160"></canvas>
+          <div class="chart-box"><canvas id="chart-plain-hist"></canvas></div>
+          <div class="chart-box"><canvas id="chart-cipher-hist"></canvas></div>
         </div>
         <div class="table-actions">
           <span class="hint">Ekspor nilai entropi ringkas ke Excel.</span>
@@ -348,7 +354,7 @@
     </main>
 
     <footer>
-      Brangkass Aplikasi Kriptografi — Keamanan Informasi, Program Studi Informatika, Universitas Siliwangi.
+      Dibuat untuk Tugas Proyek Aplikasi Kriptografi — Keamanan Informasi, Program Studi Informatika, Universitas Siliwangi.
     </footer>
   </div>
 </div>
